@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ProductCard } from '@/components/ProductCard'
@@ -12,7 +12,7 @@ import { db } from '@/lib/supabase'
 import { AlertCircle, Loader2, ArrowUp } from 'lucide-react'
 
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -318,5 +318,17 @@ export default function Home() {
         brandLogo={selectedProduct ? brands.find(b => b.name === selectedProduct.brand)?.favicon_url : null}
       />
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }
