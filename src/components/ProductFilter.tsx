@@ -2,90 +2,65 @@
 
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ProductCategory } from '@/types/product'
-import { Filter, Store, UtensilsCrossed, Cake, MoreHorizontal } from 'lucide-react'
+import { Filter, Store } from 'lucide-react'
 
 interface ProductFilterProps {
-  selectedCategory: ProductCategory
-  onCategoryChange: (category: ProductCategory) => void
+  brands: string[]
+  selectedBrand: string
+  onBrandChange: (brand: string) => void
 }
 
-export function ProductFilter({ selectedCategory, onCategoryChange }: ProductFilterProps) {
-  const categories = [
-    {
-      key: ProductCategory.ALL,
-      label: '全部',
-      icon: Filter,
-      color: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-    },
-    {
-      key: ProductCategory.CONVENIENCE_STORE,
-      label: '超商',
-      icon: Store,
-      color: 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-    },
-    {
-      key: ProductCategory.RESTAURANT_CHAIN,
-      label: '連鎖餐廳',
-      icon: UtensilsCrossed,
-      color: 'bg-green-100 text-green-700 hover:bg-green-200'
-    },
-    {
-      key: ProductCategory.DESSERT,
-      label: '甜點',
-      icon: Cake,
-      color: 'bg-pink-100 text-pink-700 hover:bg-pink-200'
-    },
-    {
-      key: ProductCategory.OTHER,
-      label: '其他',
-      icon: MoreHorizontal,
-      color: 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-    }
-  ]
-
-  // 將顯示名稱轉換為英文鍵值
-  const getCategoryKey = (label: string) => {
-    const keyMap = {
-      '全部': ProductCategory.ALL,
-      '超商': ProductCategory.CONVENIENCE_STORE,
-      '連鎖餐廳': ProductCategory.RESTAURANT_CHAIN,
-      '甜點': ProductCategory.DESSERT,
-      '其他': ProductCategory.OTHER
-    }
-    return keyMap[label as keyof typeof keyMap] || ProductCategory.ALL
-  }
-
+export function ProductFilter({ brands, selectedBrand, onBrandChange }: ProductFilterProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-8"
+      className="mb-8 max-w-full"
     >
-      <div className="flex flex-wrap gap-2 justify-center">
-        {categories.map((category, index) => {
-          const Icon = category.icon
-          const isSelected = selectedCategory === category.key
+      <div className="flex flex-nowrap overflow-x-auto md:flex-wrap md:justify-center gap-2 px-4 md:px-0 pb-2 md:pb-0 scrollbar-hide">
+        {/* 全部選項 */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="shrink-0"
+        >
+          <Button
+            variant={selectedBrand === 'All' ? "default" : "outline"}
+            size="sm"
+            onClick={() => onBrandChange('All')}
+            className={`flex items-center gap-2 transition-all duration-200 cursor-pointer whitespace-nowrap ${selectedBrand === 'All'
+              ? 'bg-gray-900 text-white shadow-md'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+          >
+            <Filter className="w-4 h-4" />
+            全部
+          </Button>
+        </motion.div>
+
+        {/* 品牌列表 */}
+        {brands.map((brand, index) => {
+          const isSelected = selectedBrand === brand
 
           return (
             <motion.div
-              key={category.key}
+              key={brand}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: (index + 1) * 0.05 }}
+              className="shrink-0"
             >
               <Button
                 variant={isSelected ? "default" : "outline"}
                 size="sm"
-                onClick={() => onCategoryChange(category.key)}
-                className={`flex items-center gap-2 transition-all duration-200 ${
-                  isSelected
-                    ? 'bg-gray-900 text-white shadow-md'
-                    : category.color
-                }`}
+                onClick={() => onBrandChange(brand)}
+                className={`flex items-center gap-2 transition-all duration-200 cursor-pointer whitespace-nowrap ${isSelected
+                  ? 'bg-gray-900 text-white shadow-md'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200'
+                  }`}
               >
-                <Icon className="w-4 h-4" />
-                {category.label}
+                <Store className="w-4 h-4" />
+                {brand}
               </Button>
             </motion.div>
           )

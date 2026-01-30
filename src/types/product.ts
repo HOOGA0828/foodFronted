@@ -55,6 +55,7 @@ export interface SupabaseProduct {
   crawl_metadata: Record<string, any>
   created_at: string
   updated_at: string
+  colors?: string[] // 品牌代表色
 }
 
 // 產品介面定義
@@ -62,6 +63,7 @@ export interface Product {
   // 基本資訊
   id: string
   name: string          // 產品名稱
+  japanese_name?: string // 日文名稱
   brand: string         // 品牌名稱
   category: ProductCategory // 分類
 
@@ -94,6 +96,14 @@ export interface Product {
   // 元資料
   created_at: string    // 建立時間
   updated_at: string    // 更新時間
+  colors?: string[]     // 品牌顏色
+}
+
+export interface Brand {
+  id: string
+  name: string
+  colors?: string[]
+  favicon_url?: string
 }
 
 // 將 SupabaseProduct 轉換為 Product 的工具函數
@@ -109,13 +119,13 @@ export function transformSupabaseProduct(supabaseProduct: SupabaseProduct): Prod
 
   // 取得圖片 URL
   const image_url = supabaseProduct.image_urls?.[0] ||
-                   supabaseProduct.thumbnail_url ||
-                   'https://via.placeholder.com/400x400?text=No+Image'
+    supabaseProduct.thumbnail_url ||
+    'https://via.placeholder.com/400x400?text=No+Image'
 
   // 取得發售日期
   const release_date = supabaseProduct.available_start_date ||
-                      supabaseProduct.release_date ||
-                      supabaseProduct.created_at
+    supabaseProduct.release_date ||
+    supabaseProduct.created_at
 
   // 判斷是否為季節性商品（根據標籤或其他邏輯）
   const is_seasonal = supabaseProduct.tags?.some(tag =>
@@ -124,7 +134,8 @@ export function transformSupabaseProduct(supabaseProduct: SupabaseProduct): Prod
 
   return {
     id: supabaseProduct.id,
-    name: supabaseProduct.name,
+    name: supabaseProduct.name || '未知產品', // Default to scraped name (likely Chinese)
+    japanese_name: supabaseProduct.name_jp || undefined, // Japanese name if available
     brand,
     category,
 
@@ -150,7 +161,8 @@ export function transformSupabaseProduct(supabaseProduct: SupabaseProduct): Prod
     crawled_from: supabaseProduct.crawled_from || undefined,
 
     created_at: supabaseProduct.created_at,
-    updated_at: supabaseProduct.updated_at
+    updated_at: supabaseProduct.updated_at,
+    colors: supabaseProduct.colors || []
   }
 }
 

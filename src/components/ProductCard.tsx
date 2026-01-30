@@ -2,153 +2,73 @@
 
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Product, ProductCategory } from '@/types/product'
-import { Calendar, Store, Star } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Product } from '@/types/product'
 
 interface ProductCardProps {
   product: Product
   index: number
+  onClick?: (product: Product) => void
+  className?: string
+  brandLogo?: string | null // Add brandLogo prop
 }
 
-export function ProductCard({ product, index }: ProductCardProps) {
+export function ProductCard({ product, index, onClick, className, brandLogo }: ProductCardProps) {
   // 確保圖片 URL 永遠有效
   const imageUrl = product.image_url && product.image_url.trim() !== ''
     ? product.image_url
     : 'https://via.placeholder.com/400x400?text=No+Image'
 
-  // 格式化價格
-  const formatPrice = (price: number) => {
-    if (price === 0 || price === null || price === undefined) {
-      return '價格待定'
-    }
-    return `¥${price.toLocaleString()}`
-  }
-
-  // 格式化日期
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  // 取得分類顏色
-  const getCategoryColor = (category: ProductCategory) => {
-    const colors = {
-      [ProductCategory.CONVENIENCE_STORE]: 'bg-blue-100 text-blue-800',
-      [ProductCategory.RESTAURANT_CHAIN]: 'bg-green-100 text-green-800',
-      [ProductCategory.DESSERT]: 'bg-pink-100 text-pink-800',
-      [ProductCategory.OTHER]: 'bg-gray-100 text-gray-800',
-      [ProductCategory.ALL]: 'bg-gray-100 text-gray-800'
-    }
-    return colors[category] || colors[ProductCategory.OTHER]
-  }
-
-  // 分類顯示名稱
-  const getCategoryDisplayName = (category: ProductCategory) => {
-    const displayNames = {
-      [ProductCategory.CONVENIENCE_STORE]: '超商',
-      [ProductCategory.RESTAURANT_CHAIN]: '連鎖餐廳',
-      [ProductCategory.DESSERT]: '甜點',
-      [ProductCategory.OTHER]: '其他',
-      [ProductCategory.ALL]: '全部'
-    }
-    return displayNames[category] || displayNames[ProductCategory.OTHER]
-  }
-
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.5 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.05, duration: 0.3 }}
+      className={`relative group cursor-pointer ${className || ''}`}
+      onClick={() => onClick?.(product)}
     >
-      <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-        <div className="relative aspect-square overflow-hidden">
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300">
+
+        {/* Product Image */}
+        <div className="relative w-full h-full p-6 flex items-center justify-center">
           <Image
             src={imageUrl}
             alt={product.name}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-contain transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            onError={(e) => {
-              // 如果圖片載入失敗，使用預設圖片
-              const target = e.target as HTMLImageElement;
-              if (target.src !== 'https://via.placeholder.com/400x400?text=No+Image') {
-                target.src = 'https://via.placeholder.com/400x400?text=No+Image';
-              }
-            }}
           />
-
-          {/* 新品標籤 */}
-          {product.is_new && (
-            <Badge className="absolute top-2 left-2 bg-red-500 text-white">
-              <Star className="w-3 h-3 mr-1" />
-              新品
-            </Badge>
-          )}
-
-          {/* 期間限定標籤 */}
-          {product.is_limited && (
-            <Badge className="absolute top-2 right-2 bg-orange-500 text-white">
-              期間限定
-            </Badge>
-          )}
-
-          {/* 季節性商品標籤 */}
-          {product.is_seasonal && (
-            <Badge className="absolute bottom-2 left-2 bg-purple-500 text-white">
-              季節限定
-            </Badge>
-          )}
         </div>
 
-        <CardContent className="p-4">
-          {/* 分類標籤 */}
-          <Badge className={`mb-2 ${getCategoryColor(product.category)}`}>
-            {getCategoryDisplayName(product.category)}
-          </Badge>
+        {/* Brand Logo & JP Name Overlay */}
+        <div className="absolute top-3 left-3 z-[20] max-w-[85%]">
+          <div className="flex items-center gap-2 px-2 py-1.5 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-black/5">
+            {/* Logo */}
+            <div className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden bg-white border border-gray-100">
+              {brandLogo ? (
+                <Image
+                  src={brandLogo}
+                  alt={product.brand}
+                  fill
+                  className="object-contain"
+                />
+              ) : (
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-500">
+                  {product.brand.slice(0, 1)}
+                </div>
+              )}
+            </div>
 
-          {/* 品牌名稱 */}
-          <p className="text-sm text-gray-600 mb-1">{product.brand}</p>
-
-          {/* 產品名稱 */}
-          <h3 className="font-semibold text-lg mb-2 line-clamp-2">
-            {product.name}
-          </h3>
-
-          {/* 價格 */}
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl font-bold text-gray-900">
-              {formatPrice(product.price)}
-            </span>
-            {product.original_price && product.original_price > product.price && (
-              <span className="text-sm text-gray-500 line-through">
-                {formatPrice(product.original_price)}
-              </span>
-            )}
-            <span className="text-sm text-gray-600">
-              {product.currency}
+            {/* JP Name - Prioritize japanese_name if available */}
+            <span className="text-xs font-medium text-gray-800 truncate max-w-[120px]">
+              {product.japanese_name || product.name}
             </span>
           </div>
+        </div>
 
-          {/* 發售日期 */}
-          <div className="flex items-center gap-1 text-sm text-gray-600">
-            <Calendar className="w-4 h-4" />
-            <span>{formatDate(product.available_start_date || product.release_date)}</span>
-          </div>
-
-          {/* 產品描述（如果有） */}
-          {product.description && (
-            <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-              {product.description}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        {/* Hover Overlay Hint (Optional, keeps it minimal but interactive) */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+      </div>
     </motion.div>
   )
 }

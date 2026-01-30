@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { Product, SupabaseProduct, transformSupabaseProduct, ProductCategory } from '@/types/product'
+import { Product, SupabaseProduct, transformSupabaseProduct, ProductCategory, Brand } from '@/types/product'
 
 // 建立 Supabase 客戶端實例的函數
 function createSupabaseClient() {
@@ -9,8 +9,8 @@ function createSupabaseClient() {
 
     // 檢查環境變數是否存在且有效
     if (!supabaseUrl || !supabaseAnonKey ||
-        supabaseUrl === 'your_supabase_project_url' ||
-        supabaseAnonKey === 'your_supabase_anon_key') {
+      supabaseUrl === 'your_supabase_project_url' ||
+      supabaseAnonKey === 'your_supabase_anon_key') {
       console.log('⚠️ Supabase 環境變數未設定或使用預設值，將使用模擬資料')
       return null
     }
@@ -119,6 +119,8 @@ export const db = {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .neq('status', 'ignored')
+        .eq('is_expired', false)
         .order('available_start_date', { ascending: false, nullsFirst: false })
 
       if (error) {
@@ -149,6 +151,8 @@ export const db = {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .neq('status', 'ignored')
+        .eq('is_expired', false)
         .order('available_start_date', { ascending: false, nullsFirst: false })
 
       if (error) {
@@ -187,6 +191,8 @@ export const db = {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .neq('status', 'ignored')
+        .eq('is_expired', false)
         .order('available_start_date', { ascending: false, nullsFirst: false })
 
       if (error) {
@@ -204,6 +210,26 @@ export const db = {
       // 轉換資料格式
       const transformedData = filteredData?.map(transformSupabaseProduct) || []
       return transformedData
+    }
+  },
+
+  // 品牌相關查詢
+  brands: {
+    async getAll() {
+      if (!supabase) {
+        return []
+      }
+
+      const { data, error } = await supabase
+        .from('brands')
+        .select('id, name, colors, favicon_url')
+
+      if (error) {
+        console.error('取得品牌資料失敗:', error)
+        return []
+      }
+
+      return data as Brand[]
     }
   }
 }
