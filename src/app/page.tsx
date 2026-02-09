@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { ProductCard } from '@/components/ProductCard'
@@ -27,19 +27,22 @@ function HomeContent() {
 
   const [products, setProducts] = useState<Product[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
+  // const [filteredProducts, setFilteredProducts] = useState<Product[]>([]) // Removed in favor of useMemo
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSwitchingPage, setIsSwitchingPage] = useState(false) // New state
+  const [targetNavigation, setTargetNavigation] = useState<{ brand: string, page: number } | null>(null)
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
-  const [customBgStyle, setCustomBgStyle] = useState<Object>({})
+  // const [customBgStyle, setCustomBgStyle] = useState<Object>({}) // Removed in favor of useMemo
 
-  const itemsPerPage = 20
+  // Adjusted to 24 to fill grid (divisible by 2 and 3)
+  const itemsPerPage = 24
 
   useEffect(() => {
     const handleScroll = () => {
@@ -48,6 +51,21 @@ function HomeContent() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Sync loading state with searchParams to prevent data flash
+  // Sync loading state with searchParams to prevent data flash
+  useEffect(() => {
+    if (isSwitchingPage && targetNavigation) {
+      const currentBrand = searchParams.get('brand') || 'All'
+      const currentPageParam = Number(searchParams.get('page')) || 1
+
+      if (currentBrand === targetNavigation.brand && currentPageParam === targetNavigation.page) {
+        setIsSwitchingPage(false)
+        setTargetNavigation(null)
+        window.scrollTo({ top: 0, behavior: 'auto' })
+      }
+    }
+  }, [searchParams, targetNavigation, isSwitchingPage])
 
   // Load Products and Brands
   useEffect(() => {
@@ -86,59 +104,65 @@ function HomeContent() {
 
   const uniqueBrands = Array.from(new Set(products.map(p => p.brand))).sort()
 
-  // Filter Products & Set Background Color
-  useEffect(() => {
+  const shuffledAllProducts = useMemo(() => {
+    if (products.length > 0) {
+      return shuffleArray(products)
+    }
+    return []
+  }, [products])
+
+  // Memoized Filter & Style Logic
+  const { filteredProducts, customBgStyle } = useMemo(() => {
     let result = products
+    let style = {}
+
     if (selectedBrandName !== 'All') {
-      // Find Brand ID based on Name from URL
       const brandInfo = brands.find(b => b.name === selectedBrandName)
 
       if (brandInfo) {
-        // Filter by ID for robustness
         result = products.filter(product => product.brand_id === brandInfo.id)
-
         const brandColor = brandInfo.colors?.[0]
         if (brandColor) {
-          setCustomBgStyle({
-            background: `linear-gradient(135deg, ${brandColor}15 0%, ${brandColor}30 100%)`, // Light tint
+          style = {
+            background: `linear-gradient(135deg, ${brandColor}15 0%, ${brandColor}30 100%)`,
             transition: 'background 0.8s ease-in-out'
-          })
+          }
         } else {
-          setCustomBgStyle({
+          style = {
             background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
             transition: 'background 0.8s ease-in-out'
-          })
+          }
         }
       } else {
-        // Fallback if brand name in URL is invalid or not found
         result = []
-        setCustomBgStyle({
+        style = {
           background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
           transition: 'background 0.8s ease-in-out'
-        })
+        }
       }
-
     } else {
-      // Default Background
-      setCustomBgStyle({
+      style = {
         background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
         transition: 'background 0.8s ease-in-out'
-      })
-      // Randomize for 'All'
-      if (products.length > 0) {
-        result = shuffleArray(products)
       }
+      // Use the pre-shuffled array for consistent sort order until products change
+      result = shuffledAllProducts
     }
-    setFilteredProducts(result)
-  }, [products, brands, selectedBrandName])
+
+    return { filteredProducts: result, customBgStyle: style }
+  }, [products, brands, selectedBrandName, shuffledAllProducts])
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
 
+  // Ensure url is updated if page is out of bounds (e.g. after filtering)
   useEffect(() => {
-    if (!loading && products.length > 0 && currentPage > totalPages && totalPages > 0) {
-      updateUrl(selectedBrandName, 1)
+    if (!loading && !isSwitchingPage && products.length > 0 && currentPage > totalPages && totalPages > 0) {
+      // Do not use handleTransition here to avoid infinite loops or jarring UX on auto-correction
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('page', '1')
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
-  }, [loading, products, currentPage, totalPages, selectedBrandName])
+  }, [loading, isSwitchingPage, products, currentPage, totalPages, selectedBrandName, pathname, router, searchParams])
 
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
@@ -160,17 +184,37 @@ function HomeContent() {
     router.push(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
+  // Unified Transition Handler
+  const handleTransition = (targetBrand: string, targetPage: number) => {
+    setTargetNavigation({ brand: targetBrand, page: targetPage })
+    setIsSwitchingPage(true)
+
+    // Slight delay to ensure render cycle
+    setTimeout(() => {
+      updateUrl(targetBrand, targetPage)
+    }, 10)
+
+    // Safety timeout: if navigation fails or doesn't change params for some reason
+    setTimeout(() => {
+      setIsSwitchingPage(prev => {
+        if (prev) {
+          // If still loading after 5s, force close
+          return false
+        }
+        return prev
+      })
+      setTargetNavigation(null)
+    }, 5000)
+  }
+
   const handleBrandChange = (brand: string) => {
-    updateUrl(brand, 1)
+    handleTransition(brand, 1)
   }
 
   const handlePageChange = (page: number) => {
-    updateUrl(selectedBrandName, page)
-    const gridElement = document.getElementById('product-grid')
-    if (gridElement) {
-      gridElement.scrollIntoView({ behavior: 'smooth' })
-    }
+    handleTransition(selectedBrandName, page)
   }
+
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -194,8 +238,8 @@ function HomeContent() {
   const handleConfirmDelete = async (productId: string) => {
     await db.products.updateProductStatus(productId, 'ignored')
     // Optimistic update
-    setProducts(products.filter(p => p.id !== productId))
-    setFilteredProducts(filteredProducts.filter(p => p.id !== productId))
+    setProducts(prev => prev.filter(p => p.id !== productId))
+    // setFilteredProducts will automatically update via useMemo
   }
 
   return (
@@ -203,7 +247,7 @@ function HomeContent() {
       <Header />
 
       {/* Main Content */}
-      <main id="product-grid" className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
+      <main id="product-grid" className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 flex-grow">
 
         {/* Filter Section */}
         <div className="mb-8">
@@ -212,15 +256,18 @@ function HomeContent() {
               brands={brands.filter(b => products.some(p => p.brand_id === b.id))}
               selectedBrand={selectedBrandName}
               onBrandChange={handleBrandChange}
+              disabled={loading || isSwitchingPage}
             />
           )}
         </div>
 
         {/* Loading */}
-        {loading && (
+        {(loading || isSwitchingPage) && (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
-            <span className="ml-3 text-lg font-medium text-muted-foreground">尋找美食中...</span>
+            <span className="ml-3 text-lg font-medium text-muted-foreground">
+              {isSwitchingPage ? '讀取中...' : '尋找美食中...'}
+            </span>
           </div>
         )}
 
@@ -233,7 +280,7 @@ function HomeContent() {
         )}
 
         {/* Product Grid */}
-        {!loading && !error && (
+        {!loading && !isSwitchingPage && !error && (
           <>
             {filteredProducts.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-dashed border-gray-200">

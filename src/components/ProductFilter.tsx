@@ -10,9 +10,10 @@ interface ProductFilterProps {
   brands: Brand[]
   selectedBrand: string
   onBrandChange: (brand: string) => void
+  disabled?: boolean
 }
 
-export function ProductFilter({ brands, selectedBrand, onBrandChange }: ProductFilterProps) {
+export function ProductFilter({ brands, selectedBrand, onBrandChange, disabled }: ProductFilterProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -28,11 +29,14 @@ export function ProductFilter({ brands, selectedBrand, onBrandChange }: ProductF
         >
           <button
             onClick={() => onBrandChange('All')}
+            disabled={disabled}
             className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-sm
               ${selectedBrand === 'All'
                 ? 'bg-primary text-primary-foreground shadow-md scale-105'
                 : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-primary border border-gray-200 hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'
-              }`}
+              }
+              ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
+              `}
           >
             <Filter className="w-3.5 h-3.5" />
             全部
@@ -53,11 +57,14 @@ export function ProductFilter({ brands, selectedBrand, onBrandChange }: ProductF
             >
               <button
                 onClick={() => onBrandChange(brand.name)}
+                disabled={disabled}
                 className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 shadow-sm
                   ${isSelected
                     ? 'bg-primary text-primary-foreground shadow-md scale-105'
                     : 'bg-white text-gray-600 hover:bg-gray-50 hover:text-primary border border-gray-200 hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'
-                  }`}
+                  }
+                  ${disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}
+                  `}
               >
                 {brand.logo_url ? (
                   <img src={brand.logo_url} alt={brand.name} className="w-4 h-4 object-contain rounded-sm" />
