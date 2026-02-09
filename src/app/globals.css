@@ -1,39 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  /* Design System Colors for Restaurant/Food Service */
-  /* Warm/Red Palette */
-  --background: #fdf2f2;
-  /* Very light warm background */
-  --foreground: #450a0a;
-  /* Dark Red/Brown text */
-  --primary: #dc2626;
-  /* Red 600 */
+  /* Design System Colors for Japan Food Tracker - Re-Design */
+  /* Main Backgrounds */
+  --background: #f5f5f5;
+  /* Light Gray Content Area */
+  --foreground: #2e2e2e;
+  /* Dark Gray Text */
+
+  /* Header/Footer Dark Theme */
+  --header-bg: #2e2e2e;
+  --header-fg: #ffffff;
+
+  /* Primary Accent (Gold) */
+  --primary: #d4af37;
+  /* Metallic Gold */
   --primary-foreground: #ffffff;
-  --secondary: #ca8a04;
-  /* Yellow 600 (Gold) */
-  --secondary-foreground: #ffffff;
-  --muted: #fecaca;
-  /* Red 200 */
-  --muted-foreground: #7f1d1d;
-  /* Red 900 */
+
+  /* Secondary/Muted */
+  --muted: #e5e5e5;
+  --muted-foreground: #737373;
+  /* Neutral Gray */
+
+  /* Cards */
   --card: #ffffff;
-  --card-foreground: #450a0a;
-  --border: #fecaca;
+  --card-foreground: #2e2e2e;
+  --border: #e5e5e5;
+
+  /* Status/Feedback */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-header-bg: var(--header-bg);
+  --color-header-fg: var(--header-fg);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
 
   --font-sans: var(--font-noto-sans-jp), var(--font-geist-sans), sans-serif;
   --font-serif: var(--font-noto-serif-jp), serif;
@@ -42,9 +54,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    /* Keep dark mode dark for now, potential future update */
-    --foreground: #ededed;
+    /* Optional: Full Dark Mode overwrite if needed later */
+    /* For now, sticking to the specific design provided */
   }
 }
 

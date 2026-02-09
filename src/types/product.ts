@@ -62,6 +62,7 @@ export interface SupabaseProduct {
 export interface Product {
   // 基本資訊
   id: string
+  brand_id: string      // 品牌 ID
   name: string          // 產品名稱
   japanese_name?: string // 日文名稱
   brand: string         // 品牌名稱
@@ -104,12 +105,15 @@ export interface Brand {
   name: string
   colors?: string[]
   favicon_url?: string
+  logo_url?: string
 }
 
 // 將 SupabaseProduct 轉換為 Product 的工具函數
 export function transformSupabaseProduct(supabaseProduct: SupabaseProduct): Product {
-  // 取得品牌名稱
-  const brand = supabaseProduct.metadata?.brand_info?.name || '未知品牌'
+  // 取得品牌名稱 - 優先使用 displayName
+  const brand = supabaseProduct.metadata?.brand_info?.displayName ||
+    supabaseProduct.metadata?.brand_info?.name ||
+    '未知品牌'
 
   // 取得分類
   const categoryString = supabaseProduct.metadata?.brand_info?.category || 'other'
@@ -134,6 +138,7 @@ export function transformSupabaseProduct(supabaseProduct: SupabaseProduct): Prod
 
   return {
     id: supabaseProduct.id,
+    brand_id: supabaseProduct.brand_id,
     name: supabaseProduct.name || '未知產品', // Default to scraped name (likely Chinese)
     japanese_name: supabaseProduct.name_jp || undefined, // Japanese name if available
     brand,

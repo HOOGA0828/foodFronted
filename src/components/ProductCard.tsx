@@ -1,73 +1,87 @@
-'use client'
-
-import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Card } from '@/components/ui/card'
 import { Product } from '@/types/product'
+
+import { X } from 'lucide-react'
 
 interface ProductCardProps {
   product: Product
-  index: number
-  onClick?: (product: Product) => void
-  className?: string
-  brandLogo?: string | null // Add brandLogo prop
+  onClick: (product: Product) => void
+  // Keeping these optional to avoid breaking existing usage if passed, but index/brandLogo are less critical in new design
+  index?: number
+  brandLogo?: string | null
+  showDelete?: boolean
+  onDelete?: (product: Product) => void
 }
 
-export function ProductCard({ product, index, onClick, className, brandLogo }: ProductCardProps) {
-  // 確保圖片 URL 永遠有效
-  const imageUrl = product.image_url && product.image_url.trim() !== ''
-    ? product.image_url
-    : 'https://via.placeholder.com/400x400?text=No+Image'
-
+export function ProductCard({ product, onClick, brandLogo, showDelete, onDelete }: ProductCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: index * 0.05, duration: 0.3 }}
-      className={`relative group cursor-pointer ${className || ''}`}
-      onClick={() => onClick?.(product)}
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.15)" }}
+      className="group bg-card text-card-foreground rounded-2xl overflow-hidden shadow-sm border border-border hover:border-primary/30 transition-all duration-300 cursor-pointer flex flex-col h-full relative"
+      onClick={() => onClick(product)}
     >
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-300">
+      {/* Delete Button */}
+      {showDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete?.(product)
+          }}
+          className="absolute top-2 right-2 z-50 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+          title="刪除"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
 
-        {/* Product Image */}
-        <div className="relative w-full h-full p-6 flex items-center justify-center">
-          <Image
-            src={imageUrl}
-            alt={product.name}
-            fill
-            className="object-contain transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
+      {/* Image Container */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-gray-50 border-b border-border/50">
+        <img
+          src={product.image_url || 'https://placehold.co/400x300?text=No+Image'}
+          alt={product.name}
+          className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=No+Image'
+          }}
+        />
+
+        {/* Brand Tag - Pill Shape */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 backdrop-blur shadow-sm rounded-full border border-black/5">
+          {brandLogo ? (
+            <img src={brandLogo} alt={product.brand} className="w-4 h-4 object-contain" />
+          ) : (
+            <div className="w-1.5 h-1.5 rounded-full bg-primary/80"></div>
+          )}
+          <span className="text-[11px] font-bold text-gray-700 tracking-wide">{product.brand}</span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-5 flex flex-col flex-grow justify-between gap-3 bg-white">
+        <div>
+          <h3 className="font-bold text-base text-gray-800 line-clamp-2 leading-snug group-hover:text-primary transition-colors mb-1">
+            {product.name}
+          </h3>
+          {product.japanese_name && (
+            <p className="text-xs text-muted-foreground line-clamp-1">{product.japanese_name}</p>
+          )}
         </div>
 
-        {/* Brand Logo & JP Name Overlay */}
-        <div className="absolute top-3 left-3 z-[20] max-w-[85%]">
-          <div className="flex items-center gap-2 px-2 py-1.5 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-black/5">
-            {/* Logo */}
-            <div className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden bg-white border border-gray-100">
-              {brandLogo ? (
-                <Image
-                  src={brandLogo}
-                  alt={product.brand}
-                  fill
-                  className="object-contain"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-500">
-                  {product.brand.slice(0, 1)}
-                </div>
-              )}
-            </div>
-
-            {/* JP Name - Prioritize japanese_name if available */}
-            <span className="text-xs font-medium text-gray-800 truncate max-w-[120px]">
-              {product.japanese_name || product.name}
+        <div className="flex justify-between items-end border-t border-gray-100 pt-3 mt-1">
+          <div className="flex flex-col">
+            <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Price</span>
+            <span className="text-lg font-bold text-primary font-serif">
+              ¥{product.price}
             </span>
           </div>
-        </div>
 
-        {/* Hover Overlay Hint (Optional, keeps it minimal but interactive) */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
+          <span className="text-xs font-medium text-gray-400 group-hover:text-primary transition-colors flex items-center">
+            查看詳情 →
+          </span>
+        </div>
       </div>
     </motion.div>
   )

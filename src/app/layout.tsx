@@ -38,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="zh-TW">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSerifJP.variable} ${notoSansJP.variable} antialiased font-sans`}
+        className={`${geistSans.variable} ${geistMono.variable} ${notoSerifJP.variable} ${notoSansJP.variable} antialiased font-sans min-h-screen flex flex-col bg-background text-foreground`}
       >
         {children}
       </body>

@@ -7,8 +7,12 @@ import { ProductCard } from '@/components/ProductCard'
 import { ProductFilter } from '@/components/ProductFilter'
 import { Pagination } from '@/components/Pagination'
 import { ProductModal } from '@/components/ProductModal'
+import { ProductDeleteModal } from '@/components/ProductDeleteModal'
+import { Header } from '@/components/Header'
+
 import { Product, Brand } from '@/types/product' // Updated import
 import { db } from '@/lib/supabase'
+import { shuffleArray } from '@/lib/utils'
 import { AlertCircle, Loader2, ArrowUp } from 'lucide-react'
 
 
@@ -17,11 +21,12 @@ function HomeContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const selectedBrand = searchParams.get('brand') || 'All'
+  const selectedBrandName = searchParams.get('brand') || 'All'
   const currentPage = Number(searchParams.get('page')) || 1
+  const mode = searchParams.get('mode')
 
   const [products, setProducts] = useState<Product[]>([])
-  const [brands, setBrands] = useState<Brand[]>([]) // Store brands
+  const [brands, setBrands] = useState<Brand[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +35,8 @@ function HomeContent() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // Custom Background Style
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
   const [customBgStyle, setCustomBgStyle] = useState<Object>({})
 
   const itemsPerPage = 20
@@ -49,13 +55,10 @@ function HomeContent() {
       try {
         setLoading(true)
         setError(null)
-
-        // Parallel Fetch
         const [productsData, brandsData] = await Promise.all([
           db.products.getAll() as Promise<Product[]>,
           db.brands.getAll() as Promise<Brand[]>
         ])
-
         setProducts(productsData)
         setBrands(brandsData)
 
@@ -86,20 +89,29 @@ function HomeContent() {
   // Filter Products & Set Background Color
   useEffect(() => {
     let result = products
-    if (selectedBrand !== 'All') {
-      result = products.filter(product => product.brand === selectedBrand)
+    if (selectedBrandName !== 'All') {
+      // Find Brand ID based on Name from URL
+      const brandInfo = brands.find(b => b.name === selectedBrandName)
 
-      // Find Brand Color
-      const brandInfo = brands.find(b => b.name === selectedBrand)
-      const brandColor = brandInfo?.colors?.[0]
+      if (brandInfo) {
+        // Filter by ID for robustness
+        result = products.filter(product => product.brand_id === brandInfo.id)
 
-      if (brandColor) {
-        setCustomBgStyle({
-          background: `linear-gradient(135deg, ${brandColor}15 0%, ${brandColor}30 100%)`, // Light tint
-          transition: 'background 0.8s ease-in-out'
-        })
+        const brandColor = brandInfo.colors?.[0]
+        if (brandColor) {
+          setCustomBgStyle({
+            background: `linear-gradient(135deg, ${brandColor}15 0%, ${brandColor}30 100%)`, // Light tint
+            transition: 'background 0.8s ease-in-out'
+          })
+        } else {
+          setCustomBgStyle({
+            background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+            transition: 'background 0.8s ease-in-out'
+          })
+        }
       } else {
-        // Fallback if no specific brand color found
+        // Fallback if brand name in URL is invalid or not found
+        result = []
         setCustomBgStyle({
           background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
           transition: 'background 0.8s ease-in-out'
@@ -112,17 +124,21 @@ function HomeContent() {
         background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
         transition: 'background 0.8s ease-in-out'
       })
+      // Randomize for 'All'
+      if (products.length > 0) {
+        result = shuffleArray(products)
+      }
     }
     setFilteredProducts(result)
-  }, [products, brands, selectedBrand])
+  }, [products, brands, selectedBrandName])
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
 
   useEffect(() => {
     if (!loading && products.length > 0 && currentPage > totalPages && totalPages > 0) {
-      updateUrl(selectedBrand, 1)
+      updateUrl(selectedBrandName, 1)
     }
-  }, [loading, products, currentPage, totalPages, selectedBrand])
+  }, [loading, products, currentPage, totalPages, selectedBrandName])
 
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
@@ -149,7 +165,7 @@ function HomeContent() {
   }
 
   const handlePageChange = (page: number) => {
-    updateUrl(selectedBrand, page)
+    updateUrl(selectedBrandName, page)
     const gridElement = document.getElementById('product-grid')
     if (gridElement) {
       gridElement.scrollIntoView({ behavior: 'smooth' })
@@ -170,36 +186,35 @@ function HomeContent() {
     setTimeout(() => setSelectedProduct(null), 300)
   }
 
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product)
+    setDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async (productId: string) => {
+    await db.products.updateProductStatus(productId, 'ignored')
+    // Optimistic update
+    setProducts(products.filter(p => p.id !== productId))
+    setFilteredProducts(filteredProducts.filter(p => p.id !== productId))
+  }
+
   return (
-    <div
-      className="min-h-screen text-foreground selection:bg-primary/20 transition-all duration-700 ease-in-out"
-      style={customBgStyle} // Apply dynamic background
-    >
-
-
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+      <Header />
 
       {/* Main Content */}
-      <main id="product-grid" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main id="product-grid" className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
 
-        {/* Sticky Header for Filters */}
-        <motion.div
-          initial={{ y: 0 }}
-          animate={{ y: showScrollTop ? -100 : 0 }}
-          transition={{ duration: 0.3 }}
-          className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 md:py-4 mb-8 border-b"
-        >
-          <div className="w-full overflow-hidden">
-            {/* Removed "最新商品" header text as requested */}
-
-            {!loading && (
-              <ProductFilter
-                brands={uniqueBrands}
-                selectedBrand={selectedBrand}
-                onBrandChange={handleBrandChange}
-              />
-            )}
-          </div>
-        </motion.div>
+        {/* Filter Section */}
+        <div className="mb-8">
+          {!loading && (
+            <ProductFilter
+              brands={brands.filter(b => products.some(p => p.brand_id === b.id))}
+              selectedBrand={selectedBrandName}
+              onBrandChange={handleBrandChange}
+            />
+          )}
+        </div>
 
         {/* Loading */}
         {loading && (
@@ -221,47 +236,47 @@ function HomeContent() {
         {!loading && !error && (
           <>
             {filteredProducts.length === 0 ? (
-              <div className="text-center py-20 bg-muted/30 rounded-3xl">
+              <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-dashed border-gray-200">
                 <p className="text-muted-foreground text-xl font-medium">
-                  {selectedBrand === 'All'
+                  {selectedBrandName === 'All'
                     ? '目前沒有產品資料'
-                    : `目前沒有 ${selectedBrand} 的產品`
+                    : `目前沒有 ${selectedBrandName} 的產品`
                   }
                 </p>
               </div>
             ) : (
               <>
-                <motion.div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-2">
-                  <p className="text-muted-foreground">
-                    共 <span className="font-bold text-foreground">{filteredProducts.length}</span> 項美味選擇
+                <motion.div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 px-1">
+                  <p className="text-sm text-gray-500">
+                    共 <span className="font-bold text-gray-800">{filteredProducts.length}</span> 項美食
                   </p>
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
+                  <p className="text-xs text-gray-400">
+                    最後更新時間：{lastUpdateTime}
+                  </p>
                 </motion.div>
 
-                {/* UNIFORM GRID (Max 3 columns) */}
+                {/* Grid Layout - 3 Columns for larger screens */}
                 <motion.div
                   layout
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8" // Changed to lg:grid-cols-3 and gap-8
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
                 >
                   {paginatedProducts.map((product, index) => {
-                    const productBrand = brands.find(b => b.name === product.brand)
+                    const productBrand = brands.find(b => b.id === product.brand_id)
                     return (
                       <ProductCard
                         key={product.id}
                         product={product}
-                        index={index}
                         onClick={handleProductClick}
-                        brandLogo={productBrand?.favicon_url}
+
+                        brandLogo={productBrand?.logo_url}
+                        showDelete={mode === 'delete'}
+                        onDelete={handleDeleteClick}
                       />
                     )
                   })}
                 </motion.div>
 
-                <div className="mt-12 flex justify-center">
+                <div className="mt-16 flex justify-center">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -274,29 +289,9 @@ function HomeContent() {
         )}
       </main>
 
-      {/* Footer */}
-      <motion.footer
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="bg-muted/50 border-t mt-20"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <h3 className="font-serif text-2xl font-bold mb-4">日本新品追蹤</h3>
-            {lastUpdateTime && (
-              <p className="text-sm text-muted-foreground">
-                最後更新時間：{lastUpdateTime}
-              </p>
-            )}
-            <p className="mt-8 text-xs text-muted-foreground/60">
-              © 2026 Japan Food Tracker. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </motion.footer>
 
-      {/* Scroll Top */}
+
+      {/* Scroll Top - Golden Accent */}
       <motion.button
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{
@@ -305,7 +300,7 @@ function HomeContent() {
           pointerEvents: showScrollTop ? 'auto' : 'none'
         }}
         onClick={scrollToTop}
-        className="fixed bottom-8 right-8 p-4 bg-primary text-primary-foreground rounded-full shadow-xl hover:bg-primary/90 transition-all z-50"
+        className="fixed bottom-8 right-8 p-3 bg-primary text-primary-foreground rounded-full shadow-xl hover:bg-yellow-600 transition-all z-50 ring-4 ring-white/30"
       >
         <ArrowUp className="w-6 h-6" />
       </motion.button>
@@ -315,7 +310,15 @@ function HomeContent() {
         product={selectedProduct}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        brandLogo={selectedProduct ? brands.find(b => b.name === selectedProduct.brand)?.favicon_url : null}
+        brandLogo={selectedProduct ? brands.find(b => b.id === selectedProduct.brand_id)?.logo_url : null}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ProductDeleteModal
+        product={productToDelete}
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   )

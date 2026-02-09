@@ -120,7 +120,7 @@ export const db = {
         .from('products')
         .select('*')
         .neq('status', 'ignored')
-        .eq('is_expired', false)
+        .neq('status', 'sold_out')
         .order('available_start_date', { ascending: false, nullsFirst: false })
 
       if (error) {
@@ -152,7 +152,7 @@ export const db = {
         .from('products')
         .select('*')
         .neq('status', 'ignored')
-        .eq('is_expired', false)
+        .neq('status', 'sold_out')
         .order('available_start_date', { ascending: false, nullsFirst: false })
 
       if (error) {
@@ -192,7 +192,7 @@ export const db = {
         .from('products')
         .select('*')
         .neq('status', 'ignored')
-        .eq('is_expired', false)
+        .neq('status', 'sold_out')
         .order('available_start_date', { ascending: false, nullsFirst: false })
 
       if (error) {
@@ -210,6 +210,24 @@ export const db = {
       // 轉換資料格式
       const transformedData = filteredData?.map(transformSupabaseProduct) || []
       return transformedData
+    },
+
+    // 更新產品狀態
+    async updateProductStatus(id: string, status: string) {
+      if (!supabase) {
+        console.log(`[開發模式] 更新產品 ${id} 狀態為 ${status}`)
+        return
+      }
+
+      const { error } = await supabase
+        .from('products')
+        .update({ status })
+        .eq('id', id)
+
+      if (error) {
+        console.error('更新產品狀態失敗:', error)
+        throw error
+      }
     }
   },
 
@@ -222,7 +240,7 @@ export const db = {
 
       const { data, error } = await supabase
         .from('brands')
-        .select('id, name, colors, favicon_url')
+        .select('id, name, colors, favicon_url, logo_url')
 
       if (error) {
         console.error('取得品牌資料失敗:', error)
