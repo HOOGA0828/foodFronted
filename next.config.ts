@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'export',
-  basePath: '/foodFronted',
+  /* 1. 刪除 output: 'export' (除非你確定要用純靜態，否則 Vercel 預設模式更強大) */
+  /* 2. 刪除 basePath，這是導致你 404 的主因 */
   images: {
     unoptimized: true,
     remotePatterns: [
